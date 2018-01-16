@@ -48,6 +48,19 @@
   :type 'boolean
   :group 'browser-refresh)
 
+(defvar-local browser-refresh--selected-firefox-window-id nil
+  "For internal use.
+Store the window id of currently selected Firefox instance.")
+;;
+;; Tool
+;;
+(defun browser-refresh-call-process-to-string (program &rest args)
+  "`shell-command-to-string' is too slow for simple task, so use this."
+  (with-temp-buffer
+    (apply #'call-process program (append '(nil t nil) args))
+    (buffer-string)))
+
+
 ;;
 ;; Base class
 ;;
@@ -129,6 +142,15 @@
                (forward-line 1))
              finally return window-ids)))
 
+(defun browser-refresh--linux-search-window-ids-by-name (name-pattern)
+  (let ((raw (browser-refresh-call-process-to-string "xdotool" "search" "--name" name-pattern)))
+    (cl-remove-if #'string-empty-p (split-string raw "\n"))))
+
+(defun browser-refresh--linux-list-window (name-pattern)
+  "Return a list: ((WINDOW-ID . WINDOW-NAME) ...)"
+  (mapcar (lambda (id) (string-trim (browser-refresh-call-process-to-string "xdotool" "getwindowname" id)))
+          (browser-refresh--linux-search-window-ids-by-name name-pattern)))
+
 (defmethod activate ((refresher browser-refresh-linux) window-id)
   (when (oref refresher :activate)
     (unless (zerop (call-process "xdotool" nil nil nil "windowactivate" window-id))
@@ -140,7 +162,7 @@
     (activate refresher (car window-ids))))
 
 (defmethod firefox ((refresher browser-refresh-linux))
-  (let ((window-ids (browser-refresh--linux-search-window-ids-by-class "Firefox")))
+  (let ((window-ids (browser-refresh--linux-search-window-ids-by-name "Mozilla Firefox$")))
     (browser-refresh--send-key-with-xdotool window-ids "F5")
     (activate refresher (car window-ids))))
 

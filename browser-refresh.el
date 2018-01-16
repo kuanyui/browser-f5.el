@@ -109,9 +109,6 @@
 (defclass browser-refresh-linux (browser-refresh-base)
   ())
 
-(defconst browser-refresh--xdotool-base-option
-  '("search" "--sync" "--onlyvisible"))
-
 (defun browser-refresh--send-key-with-xdotool (window-ids key)
   (dolist (window-id window-ids)
     (unless (zerop (call-process "xdotool" nil nil nil "key" "--window" window-id key))

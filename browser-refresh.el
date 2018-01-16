@@ -114,7 +114,7 @@
     (unless (zerop (call-process "xdotool" nil nil nil "key" "--window" window-id key))
       (error "Failed: 'xdotool key --window %s %s'" window-id key))))
 
-(defun browser-refresh--linux-search-window-id (class)
+(defun browser-refresh--linux-search-window-ids-by-class (class)
   (with-temp-buffer
     (unless (zerop (call-process "xdotool" nil t nil "search" "--class" class))
       (error "Failed: 'xdotool search --class %s'" class))
@@ -135,12 +135,12 @@
       (error "Failed: 'xdotool windowactivate %s'" window-id))))
 
 (defmethod chrome ((refresher browser-refresh-linux))
-  (let ((window-ids (browser-refresh--linux-search-window-id "Google-Chrome")))
+  (let ((window-ids (browser-refresh--linux-search-window-ids-by-class "Google-Chrome")))
     (browser-refresh--send-key-with-xdotool window-ids "F5")
     (activate refresher (car window-ids))))
 
 (defmethod firefox ((refresher browser-refresh-linux))
-  (let ((window-ids (browser-refresh--linux-search-window-id "Firefox")))
+  (let ((window-ids (browser-refresh--linux-search-window-ids-by-class "Firefox")))
     (browser-refresh--send-key-with-xdotool window-ids "F5")
     (activate refresher (car window-ids))))
 

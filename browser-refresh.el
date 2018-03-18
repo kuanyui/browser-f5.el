@@ -1,24 +1,5 @@
 ;;; browser-refresh.el --- Broser refresh utility
 
-;; Copyright (C) 2014 by Syohei YOSHIDA
-
-;; Author: Syohei YOSHIDA <syohex@gmail.com>
-;; URL: https://github.com/syohex/emacs-browser-refresh
-;; Version: 0.01
-;; Package-Requires: ((eieio "1.3") (cl-lib "0.5"))
-
-;; This program is free software; you can redistribute it and/or modify
-;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation, either version 3 of the License, or
-;; (at your option) any later version.
-
-;; This program is distributed in the hope that it will be useful,
-;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;; GNU General Public License for more details.
-
-;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 
@@ -26,14 +7,14 @@
 
 (require 'cl-lib)
 
-(defgroup browser-refresh nil
+(defgroup wb-refresh nil
   "Browser refresh utility for multi browsers and multi platform"
   :group 'external)
 
 (defcustom browser-refresh-save-buffer t
   "Non-nil means saving buffer before browser refresh"
   :type 'boolean
-  :group 'browser-refresh)
+  :group 'wb-refresh)
 
 (defvar-local browser-refresh--selected-window nil
   "For internal use.
@@ -84,11 +65,6 @@ Store the window id of currently selected instance.")
                         :title (string-trim (browser-refresh-call-process-to-string "xdotool" "getwindowname" id))))
           (browser-refresh--linux-search-window-ids-by-name name-pattern)))
 
-;; (defun activate ((refresher browser-refresh-linux) window-id)
-;;   (when (oref refresher :activate)
-;;     (unless (zerop (call-process "xdotool" nil nil nil "windowactivate" window-id))
-;;       (error "Failed: 'xdotool windowactivate %s'" window-id))))
-
 (defun browser-refresh-linux-force-select-window ()
   (interactive)
   (let* ((i 0)
@@ -105,7 +81,7 @@ Store the window id of currently selected instance.")
     selected-window))
 
 ;;;###autoload
-(defun browser-refresh ()
+(defun wb-refresh ()
   (interactive)
   (when (and browser-refresh-save-buffer (buffer-modified-p))
     (save-buffer))
@@ -126,6 +102,6 @@ Store the window id of currently selected instance.")
        (browser-refresh-call-process-to-string "xdotool" "key" "--window" window-id "F5"))
       )))
 
-(provide 'browser-refresh)
+(provide 'wb-refresh)
 
 ;;; browser-refresh.el ends here

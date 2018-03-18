@@ -1,15 +1,15 @@
-* wb-refresh.el
+* browser-f5.el
 
-Web Browser Refreshing.
+Refreshing web browser in Emacs.
 
 Refresh web browser from Emacs
 
-This package is rewritten from [[https://github.com/syohex/emacs-browser-refresh][browser-refresh]]:
- - Make it work again on latest multi-threaded Firefox and Chrome/Chromium.
- - Able to select window interactively.
+This package is rewrite of [[https://github.com/syohex/emacs-browser-refresh][browser-refresh]]:
+- Make it work again on latest multi-threaded Firefox and Chrome/Chromium.
+- Able to select window interactively.
 
 #+BEGIN_QUOTE
-Get rid of MacOS supporting because I doesn't use that.
+- Get rid of MacOS supporting because I doesn't use that.
 #+END_QUOTE
 
 ** Supported Platform

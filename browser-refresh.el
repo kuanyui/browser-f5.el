@@ -35,7 +35,7 @@
   :type 'boolean
   :group 'browser-refresh)
 
-(defvar-local browser-refresh--selected-window-id nil
+(defvar-local browser-refresh--selected-window nil
   "For internal use.
 Store the window id of currently selected instance.")
 
@@ -44,6 +44,7 @@ Store the window id of currently selected instance.")
 ;;
 (defun browser-refresh-call-process-to-string (program &rest args)
   "`shell-command-to-string' is too slow for simple task, so use this."
+  (message (string-join (cons program args) " "))
   (with-temp-buffer
     (apply #'call-process program (append '(nil t nil) args))
     (buffer-string)))
@@ -53,7 +54,7 @@ Store the window id of currently selected instance.")
 
 (defun browser-refresh--send-key-with-xdotool (window-id key)
   (message "window-id %s, %s" window-id key)
-  (unless (zerop (call-process "xdotool" nil nil nil "key" "--window" window-id key))
+  (unless (zerop (browser-refresh-call-process-to-string "xdotool" "key" "--window" window-id key))
     (error "Failed: 'xdotool key --window %s %s'" window-id key)))
 
 (defun browser-refresh--linux-search-window-ids-by-class (class)
@@ -75,11 +76,12 @@ Store the window id of currently selected instance.")
   (let ((raw (browser-refresh-call-process-to-string "xdotool" "search" "--name" name-pattern)))
     (cl-remove-if #'string-empty-p (split-string raw "\n"))))
 
-(defun browser-refresh-linux-list-window-by-name (name-pattern)
+(defun browser-refresh-linux-list-window-by-name (name-pattern browser-symbol)
   "Return a list: ((WINDOW-ID . WINDOW-NAME) ...)"
-  (mapcar (lambda (id) (cons
-                        id
-                        (string-trim (browser-refresh-call-process-to-string "xdotool" "getwindowname" id))))
+  (mapcar (lambda (id) (list
+                        :id id
+                        :type browser-symbol
+                        :title (string-trim (browser-refresh-call-process-to-string "xdotool" "getwindowname" id))))
           (browser-refresh--linux-search-window-ids-by-name name-pattern)))
 
 ;; (defun activate ((refresher browser-refresh-linux) window-id)
@@ -89,26 +91,40 @@ Store the window id of currently selected instance.")
 
 (defun browser-refresh-linux-force-select-window ()
   (interactive)
-  (let* ((candidates (mapcar (lambda (x)
-                               (let ((id (car x))
-                                     (name (cdr x)))
-                                 (cons name id)))
+  (let* ((i 0)
+         (candidates (mapcar (lambda (pl)
+                               (incf i)
+                               (cons (format "%02d :: %s" i (plist-get pl :title))
+                                     pl))
                              (append
-                              (browser-refresh-linux-list-window-by-name "Google Chrome$")
-                              (browser-refresh-linux-list-window-by-name "Mozilla Firefox$"))))
-         (selected-window-name (ido-completing-read "Select a window:" candidates nil t))
-         (selected-window-id (cdr (assoc selected-window-name candidates))))
-    (setq-local browser-refresh--selected-window-id selected-window-id)
-    selected-window-id))
+                              (browser-refresh-linux-list-window-by-name "Google Chrome$" 'chrome)
+                              (browser-refresh-linux-list-window-by-name "Mozilla Firefox$" 'firefox))))
+         (selected-str (ido-completing-read "Select a window:" candidates nil t))
+         (selected-window (cdr (assoc selected-str candidates))))
+    (setq-local browser-refresh--selected-window selected-window)
+    selected-window))
 
 ;;;###autoload
 (defun browser-refresh ()
   (interactive)
   (when (and browser-refresh-save-buffer (buffer-modified-p))
     (save-buffer))
-  (if (null browser-refresh--selected-window-id)
+  (if (or (null browser-refresh--selected-window)
+          current-prefix-arg)
       (browser-refresh-linux-force-select-window))
-  (browser-refresh--send-key-with-xdotool browser-refresh--selected-window-id "F5"))
+  (let ((window-id (plist-get browser-refresh--selected-window :id))
+        (browser-type (plist-get browser-refresh--selected-window :type)))
+    (case browser-type
+      ((chrome)
+       (let ((current-active-window-id (browser-refresh-call-process-to-string "xdotool" "getactivewindow")))
+         (sleep-for 0.1)  ; WTF?! sleep solve shit problem again?!
+         (browser-refresh-call-process-to-string "xdotool"
+                                                 "windowactivate" "--sync" window-id
+                                                 "key" "--window" window-id "F5"
+                                                 "windowactivate" "--sync" current-active-window-id)))
+      ((firefox)
+       (browser-refresh-call-process-to-string "xdotool" "key" "--window" window-id "F5"))
+      )))
 
 (provide 'browser-refresh)
 

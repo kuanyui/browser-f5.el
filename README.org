@@ -21,11 +21,7 @@ This package is rewrite of [[https://github.com/syohex/emacs-browser-refresh][br
 - Chromium
 - Google Chrome
 
-** Customization
-
-- =wb-refresh-save-buffer=
-
 ** Usage
-=M-x wb-refresh=
+=M-x browser-f5=
 
 Add =C-u-= prefix can force re-select another browser window.

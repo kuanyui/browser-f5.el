@@ -25,32 +25,20 @@
 ;;; Code:
 
 (require 'cl-lib)
-(require 'eieio)
-
-(declare-function do-applescript "nsfns.m")
 
 (defgroup browser-refresh nil
   "Browser refresh utility for multi browsers and multi platform"
   :group 'external)
-
-(defcustom browser-refresh-activate t
-  "Activate browser after refresh"
-  :type 'boolean
-  :group 'browser-refresh)
-
-(defcustom browser-refresh-default-browser 'chrome
-  "Default browser"
-  :type 'symbol
-  :group 'browser-refresh)
 
 (defcustom browser-refresh-save-buffer t
   "Non-nil means saving buffer before browser refresh"
   :type 'boolean
   :group 'browser-refresh)
 
-(defvar-local browser-refresh--selected-firefox-window-id nil
+(defvar-local browser-refresh--selected-window-id nil
   "For internal use.
-Store the window id of currently selected Firefox instance.")
+Store the window id of currently selected instance.")
+
 ;;
 ;; Tool
 ;;
@@ -59,73 +47,14 @@ Store the window id of currently selected Firefox instance.")
   (with-temp-buffer
     (apply #'call-process program (append '(nil t nil) args))
     (buffer-string)))
-
-
-;;
-;; Base class
-;;
-
-(defclass browser-refresh-base ()
-  ((activate :initarg :activate)))
-
-;;
-;; MacOSX
-;;
-
-(defclass browser-refresh-mac (browser-refresh-base)
-  ())
-
-(defsubst browser-refresh--activate-string (activate-p)
-  (if activate-p "activate" ""))
-
-(defun browser-refresh--chrome-applescript (app activate-p)
-  (do-applescript
-   (format
-    "
-  tell application \"%s\"
-    %s
-    set winref to a reference to (first window whose title does not start with \"Developer Tools - \")
-    set winref's index to 1
-    reload active tab of winref
-  end tell
-" app (browser-refresh--activate-string activate-p))) )
-
-(defmethod chrome ((refresher browser-refresh-mac))
-  (browser-refresh--chrome-applescript "Google Chrome" (oref refresher :activate)))
-
-(defmethod firefox ((refresher browser-refresh-mac))
-  (do-applescript
-   (format
-    "
-  tell application \"Firefox\"
-    %s
-    tell application \"System Events\" to keystroke \"r\" using command down
-  end tell
-" (browser-refresh--activate-string (oref refresher :activate)))))
-
-(defmethod safari ((refresher browser-refresh-mac))
-  (do-applescript
-   (format
-    "
-  tell application \"Safari\"
-    %s
-    tell its first document
-    set its URL to (get its URL)
-    end tell
-  end tell
-" (browser-refresh--activate-string (oref refresher :activate)))))
-
 ;;
 ;; GNU/Linux
 ;;
 
-(defclass browser-refresh-linux (browser-refresh-base)
-  ())
-
-(defun browser-refresh--send-key-with-xdotool (window-ids key)
-  (dolist (window-id window-ids)
-    (unless (zerop (call-process "xdotool" nil nil nil "key" "--window" window-id key))
-      (error "Failed: 'xdotool key --window %s %s'" window-id key))))
+(defun browser-refresh--send-key-with-xdotool (window-id key)
+  (message "window-id %s, %s" window-id key)
+  (unless (zerop (call-process "xdotool" nil nil nil "key" "--window" window-id key))
+    (error "Failed: 'xdotool key --window %s %s'" window-id key)))
 
 (defun browser-refresh--linux-search-window-ids-by-class (class)
   (with-temp-buffer
@@ -146,40 +75,40 @@ Store the window id of currently selected Firefox instance.")
   (let ((raw (browser-refresh-call-process-to-string "xdotool" "search" "--name" name-pattern)))
     (cl-remove-if #'string-empty-p (split-string raw "\n"))))
 
-(defun browser-refresh--linux-list-window (name-pattern)
+(defun browser-refresh-linux-list-window-by-name (name-pattern)
   "Return a list: ((WINDOW-ID . WINDOW-NAME) ...)"
-  (mapcar (lambda (id) (string-trim (browser-refresh-call-process-to-string "xdotool" "getwindowname" id)))
+  (mapcar (lambda (id) (cons
+                        id
+                        (string-trim (browser-refresh-call-process-to-string "xdotool" "getwindowname" id))))
           (browser-refresh--linux-search-window-ids-by-name name-pattern)))
 
-(defmethod activate ((refresher browser-refresh-linux) window-id)
-  (when (oref refresher :activate)
-    (unless (zerop (call-process "xdotool" nil nil nil "windowactivate" window-id))
-      (error "Failed: 'xdotool windowactivate %s'" window-id))))
+;; (defun activate ((refresher browser-refresh-linux) window-id)
+;;   (when (oref refresher :activate)
+;;     (unless (zerop (call-process "xdotool" nil nil nil "windowactivate" window-id))
+;;       (error "Failed: 'xdotool windowactivate %s'" window-id))))
 
-(defmethod chrome ((refresher browser-refresh-linux))
-  (let ((window-ids (browser-refresh--linux-search-window-ids-by-class "Google-Chrome")))
-    (browser-refresh--send-key-with-xdotool window-ids "F5")
-    (activate refresher (car window-ids))))
-
-(defmethod firefox ((refresher browser-refresh-linux))
-  (let ((window-ids (browser-refresh--linux-search-window-ids-by-name "Mozilla Firefox$")))
-    (browser-refresh--send-key-with-xdotool window-ids "F5")
-    (activate refresher (car window-ids))))
-
-(defun browser-refresh--make-refresher ()
-  (let ((class (cl-case system-type
-                 (gnu/linux 'browser-refresh-linux)
-                 (darwin 'browser-refresh-mac)
-                 (otherwise (error "%s is not supported yet" system-type)))))
-    (make-instance class :activate browser-refresh-activate)))
+(defun browser-refresh-linux-force-select-window ()
+  (interactive)
+  (let* ((candidates (mapcar (lambda (x)
+                               (let ((id (car x))
+                                     (name (cdr x)))
+                                 (cons name id)))
+                             (append
+                              (browser-refresh-linux-list-window-by-name "Google Chrome$")
+                              (browser-refresh-linux-list-window-by-name "Mozilla Firefox$"))))
+         (selected-window-name (ido-completing-read "Select a window:" candidates nil t))
+         (selected-window-id (cdr (assoc selected-window-name candidates))))
+    (setq-local browser-refresh--selected-window-id selected-window-id)
+    selected-window-id))
 
 ;;;###autoload
 (defun browser-refresh ()
   (interactive)
   (when (and browser-refresh-save-buffer (buffer-modified-p))
     (save-buffer))
-  (let ((refresher (browser-refresh--make-refresher)))
-    (funcall browser-refresh-default-browser refresher)))
+  (if (null browser-refresh--selected-window-id)
+      (browser-refresh-linux-force-select-window))
+  (browser-refresh--send-key-with-xdotool browser-refresh--selected-window-id "F5"))
 
 (provide 'browser-refresh)
 

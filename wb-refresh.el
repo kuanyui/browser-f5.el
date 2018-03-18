@@ -33,26 +33,6 @@ Store the window id of currently selected instance.")
 ;; GNU/Linux
 ;;
 
-(defun browser-f5--send-key-with-xdotool (window-id key)
-  (message "window-id %s, %s" window-id key)
-  (unless (zerop (browser-f5-call-process-to-string "xdotool" "key" "--window" window-id key))
-    (error "Failed: 'xdotool key --window %s %s'" window-id key)))
-
-(defun browser-f5--linux-search-window-ids-by-class (class)
-  (with-temp-buffer
-    (unless (zerop (call-process "xdotool" nil t nil "search" "--class" class))
-      (error "Failed: 'xdotool search --class %s'" class))
-    (goto-char (point-min))
-    (cl-loop with window-ids = nil
-             until (eobp)
-             do
-             (progn
-               (push (buffer-substring-no-properties
-                      (line-beginning-position) (line-end-position))
-                     window-ids)
-               (forward-line 1))
-             finally return window-ids)))
-
 (defun browser-f5--linux-search-window-ids-by-name (name-pattern)
   (let ((raw (browser-f5-call-process-to-string "xdotool" "search" "--name" name-pattern)))
     (cl-remove-if #'string-empty-p (split-string raw "\n"))))

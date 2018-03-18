@@ -1,4 +1,4 @@
-;;; wb-refresh.el --- Refresh web browser in Emacs
+;;; browser-f5.el --- Refresh web browser in Emacs
 
 
 ;;; Commentary:
@@ -7,23 +7,23 @@
 
 (require 'cl-lib)
 
-(defgroup wb-refresh nil
+(defgroup browser-f5 nil
   "Browser refresh utility for multi browsers and multi platform"
   :group 'external)
 
-(defcustom wb-refresh-save-buffer t
+(defcustom browser-f5-save-buffer t
   "Non-nil means saving buffer before browser refresh"
   :type 'boolean
-  :group 'wb-refresh)
+  :group 'browser-f5)
 
-(defvar-local wb-refresh--selected-window nil
+(defvar-local browser-f5--selected-window nil
   "For internal use.
 Store the window id of currently selected instance.")
 
 ;;
 ;; Tool
 ;;
-(defun wb-refresh-call-process-to-string (program &rest args)
+(defun browser-f5-call-process-to-string (program &rest args)
   "`shell-command-to-string' is too slow for simple task, so use this."
   (message (string-join (cons program args) " "))
   (with-temp-buffer
@@ -33,12 +33,12 @@ Store the window id of currently selected instance.")
 ;; GNU/Linux
 ;;
 
-(defun wb-refresh--send-key-with-xdotool (window-id key)
+(defun browser-f5--send-key-with-xdotool (window-id key)
   (message "window-id %s, %s" window-id key)
-  (unless (zerop (wb-refresh-call-process-to-string "xdotool" "key" "--window" window-id key))
+  (unless (zerop (browser-f5-call-process-to-string "xdotool" "key" "--window" window-id key))
     (error "Failed: 'xdotool key --window %s %s'" window-id key)))
 
-(defun wb-refresh--linux-search-window-ids-by-class (class)
+(defun browser-f5--linux-search-window-ids-by-class (class)
   (with-temp-buffer
     (unless (zerop (call-process "xdotool" nil t nil "search" "--class" class))
       (error "Failed: 'xdotool search --class %s'" class))
@@ -53,19 +53,20 @@ Store the window id of currently selected instance.")
                (forward-line 1))
              finally return window-ids)))
 
-(defun wb-refresh--linux-search-window-ids-by-name (name-pattern)
-  (let ((raw (wb-refresh-call-process-to-string "xdotool" "search" "--name" name-pattern)))
+(defun browser-f5--linux-search-window-ids-by-name (name-pattern)
+  (let ((raw (browser-f5-call-process-to-string "xdotool" "search" "--name" name-pattern)))
     (cl-remove-if #'string-empty-p (split-string raw "\n"))))
 
-(defun wb-refresh-linux-list-window-by-name (name-pattern browser-symbol)
-  "Return a list: ((WINDOW-ID . WINDOW-NAME) ...)"
+(defun browser-f5-linux-list-window-by-name (name-pattern type)
+  "Return a list contains multiple plist: ((:id WINDOW-ID :type TYPE :title TITLE) ...)
+TYPE ::= chrome | chromium | firefox"
   (mapcar (lambda (id) (list
                         :id id
-                        :type browser-symbol
-                        :title (string-trim (wb-refresh-call-process-to-string "xdotool" "getwindowname" id))))
-          (wb-refresh--linux-search-window-ids-by-name name-pattern)))
+                        :type type
+                        :title (string-trim (browser-f5-call-process-to-string "xdotool" "getwindowname" id))))
+          (browser-f5--linux-search-window-ids-by-name name-pattern)))
 
-(defun wb-refresh-linux-force-select-window ()
+(defun browser-f5-linux-force-select-window ()
   (interactive)
   (let* ((i 0)
          (candidates (mapcar (lambda (pl)
@@ -73,38 +74,38 @@ Store the window id of currently selected instance.")
                                (cons (format "%02d :: %s \t:: %s" i (plist-get pl :type) (plist-get pl :title))
                                      pl))
                              (append
-                              (wb-refresh-linux-list-window-by-name ".Google Chrome$" 'chrome)
-                              (wb-refresh-linux-list-window-by-name ".Chromium$" 'chromium)
-                              (wb-refresh-linux-list-window-by-name ".Mozilla Firefox$" 'firefox))))
+                              (browser-f5-linux-list-window-by-name ".Google Chrome$" 'chrome)
+                              (browser-f5-linux-list-window-by-name ".Chromium$" 'chromium)
+                              (browser-f5-linux-list-window-by-name ".Mozilla Firefox$" 'firefox))))
          (selected-str (ido-completing-read "Select a window:" candidates nil t))
          (selected-window (cdr (assoc selected-str candidates))))
     (message "%s" selected-window)
-    (setq-local wb-refresh--selected-window selected-window)
+    (setq-local browser-f5--selected-window selected-window)
     selected-window))
 
 ;;;###autoload
-(defun wb-refresh ()
+(defun browser-f5 ()
   (interactive)
-  (when (and wb-refresh-save-buffer (buffer-modified-p))
+  (when (and browser-f5-save-buffer (buffer-modified-p))
     (save-buffer))
-  (if (or (null wb-refresh--selected-window)
+  (if (or (null browser-f5--selected-window)
           current-prefix-arg)
-      (wb-refresh-linux-force-select-window))
-  (let ((window-id (plist-get wb-refresh--selected-window :id))
-        (browser-type (plist-get wb-refresh--selected-window :type)))
-    (message "%s" wb-refresh--selected-window)
+      (browser-f5-linux-force-select-window))
+  (let ((window-id (plist-get browser-f5--selected-window :id))
+        (browser-type (plist-get browser-f5--selected-window :type)))
+    (message "%s" browser-f5--selected-window)
     (case browser-type
       ((chrome chromium)
-       (let ((current-active-window-id (wb-refresh-call-process-to-string "xdotool" "getactivewindow")))
+       (let ((current-active-window-id (browser-f5-call-process-to-string "xdotool" "getactivewindow")))
          (sleep-for 0.1)  ; WTF?! sleep solve shit problem again?!
-         (wb-refresh-call-process-to-string "xdotool"
+         (browser-f5-call-process-to-string "xdotool"
                                             "windowactivate" "--sync" window-id
                                             "key" "--window" window-id "F5"
                                             "windowactivate" "--sync" current-active-window-id)))
       ((firefox)
-       (wb-refresh-call-process-to-string "xdotool" "key" "--window" window-id "F5"))
+       (browser-f5-call-process-to-string "xdotool" "key" "--window" window-id "F5"))
       )))
 
-(provide 'wb-refresh)
+(provide 'browser-f5)
 
-;;; wb-refresh.el ends here
+;;; browser-f5.el ends here

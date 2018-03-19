@@ -2,9 +2,7 @@
 
 Refreshing web browser in Emacs.
 
-Refresh web browser from Emacs
-
-This package is rewrite of [[https://github.com/syohex/emacs-browser-refresh][browser-refresh]]:
+This package is rewrite version of [[https://github.com/syohex/emacs-browser-refresh][browser-refresh]]:
 - Make it work again on latest multi-threaded Firefox and Chrome/Chromium.
 - Able to select window interactively.
 

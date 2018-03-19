@@ -10,7 +10,10 @@ This package is a rewrite version of [[https://github.com/syohex/emacs-browser-r
 - Get rid of MacOS supporting because I doesn't use that.
 #+END_QUOTE
 
-** Supported Platform
+** Screenshot
+[[file:screenshot.png]]
+
+* Requirements
 - GNU/Linux
 - [[https://github.com/jordansissel/xdotool][xdotool]]
 
@@ -19,7 +22,7 @@ This package is a rewrite version of [[https://github.com/syohex/emacs-browser-r
 - Chromium
 - Google Chrome
 
-** Setup
+* Setup
 #+BEGIN_SRC elisp
 (require 'browser-f5)
 (setq browser-f5-auto-save-buffer t) ; auto save buffer before refreshing
@@ -28,7 +31,7 @@ This package is a rewrite version of [[https://github.com/syohex/emacs-browser-r
 (define-key nxml-mode-map (kbd "<f5>") 'browser-f5)
 #+END_SRC
 
-** Usage
+* Usage
 =M-x browser-f5=
 
 Add =C-u-= prefix can force re-select another browser window.

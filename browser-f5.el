@@ -6,6 +6,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'ido)
 
 (defgroup browser-f5 nil
   "Browser refresh utility for multi browsers and multi platform"
@@ -59,7 +60,7 @@ TYPE ::= chrome | chromium | firefox"
                               (browser-f5-linux-list-window-by-name ".Google Chrome$" 'chrome)
                               (browser-f5-linux-list-window-by-name ".Chromium$" 'chromium)
                               (browser-f5-linux-list-window-by-name ".Mozilla Firefox$" 'firefox))))
-         (selected-str (ido-completing-read "Select a window:" candidates nil t))
+         (selected-str (ido-completing-read "Select a window: " candidates nil t))
          (selected-window (cdr (assoc selected-str candidates))))
     (message "%s" selected-window)
     (setq-local browser-f5--selected-window selected-window)

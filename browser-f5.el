@@ -11,7 +11,7 @@
   "Browser refresh utility for multi browsers and multi platform"
   :group 'external)
 
-(defcustom browser-f5-save-buffer t
+(defcustom browser-f5-auto-save-buffer t
   "Non-nil means saving buffer before browser refresh"
   :type 'boolean
   :group 'browser-f5)
@@ -20,18 +20,20 @@
   "For internal use.
 Store the window id of currently selected instance.")
 
-;;
-;; Tool
-;;
+;; ======================================================
+;; Tools
+;; ======================================================
+
 (defun browser-f5-call-process-to-string (program &rest args)
   "`shell-command-to-string' is too slow for simple task, so use this."
   (message (string-join (cons program args) " "))
   (with-temp-buffer
     (apply #'call-process program (append '(nil t nil) args))
     (buffer-string)))
-;;
-;; GNU/Linux
-;;
+
+;; ======================================================
+;; Main
+;; ======================================================
 
 (defun browser-f5--linux-search-window-ids-by-name (name-pattern)
   (let ((raw (browser-f5-call-process-to-string "xdotool" "search" "--name" name-pattern)))
@@ -66,7 +68,7 @@ TYPE ::= chrome | chromium | firefox"
 ;;;###autoload
 (defun browser-f5 ()
   (interactive)
-  (when (and browser-f5-save-buffer (buffer-modified-p))
+  (when (and browser-f5-auto-save-buffer (buffer-modified-p))
     (save-buffer))
   (if (or (null browser-f5--selected-window)
           current-prefix-arg)

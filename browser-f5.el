@@ -59,7 +59,7 @@ TYPE ::= chrome | chromium | firefox"
                              (append
                               (browser-f5-linux-list-window-by-name ".Google Chrome$" 'chrome)
                               (browser-f5-linux-list-window-by-name ".Chromium$" 'chromium)
-                              (browser-f5-linux-list-window-by-name ".Mozilla Firefox$" 'firefox))))
+                              (browser-f5-linux-list-window-by-name "Mozilla Firefox$" 'firefox))))
          (selected-str (ido-completing-read "Select a window: " candidates nil t))
          (selected-window (cdr (assoc selected-str candidates))))
     (message "%s" selected-window)
